@@ -1,0 +1,1 @@
+RNN model from Rosen (2021), which is in turn built on top of Mayer and Nelson (2020).
