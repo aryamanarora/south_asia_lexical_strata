@@ -39,6 +39,32 @@ def compute_perplexity(dataset, rnns, device, bsz=1):
     perplexity = torch.exp(nll / total_unmasked_tokens).cpu()
     #print('nll', nll, total_unmasked_tokens, nll / total_unmasked_tokens, perplexity, perplexity.data)
     return perplexity.data
+
+def all_perplexities(dataset, rnns, device, bsz=1):
+    criterion = nn.CrossEntropyLoss(ignore_index=0, reduction='sum')
+    num_examples, seq_len = dataset.size()
+    #print('ne sl', num_examples, seq_len)
+    
+    #batches = [(start, start + bsz) for start in\
+    #           range(0, num_examples, bsz)]
+    
+    total_unmasked_tokens = 0.
+    nll = [0.] * len(rnns)
+    #for b_idx, (start, end) in enumerate(batches):
+    for i in range(num_examples):
+        wd = torch.unsqueeze(dataset[i], 0)
+        ut = torch.nonzero(wd).size(0)
+        targets = wd[:, 1:].contiguous().view(-1)
+        for rnn in rnns.keys():
+            preds = rnns[rnn](wd)
+            preds = preds[0][:, :-1, :].contiguous().view(-1, rnns[rnn].vocab_size)
+            l = criterion(preds, targets)
+            nll[rnn] += l.detach()
+        total_unmasked_tokens += ut
+
+    perplexity = [torch.exp(x / total_unmasked_tokens).cpu() for x in nll]
+    #print('nll', nll, total_unmasked_tokens, nll / total_unmasked_tokens, perplexity, perplexity.data)
+    return [x.data for x in perplexity]
     
 def train_lm(dataset, dev, params, rnns, ix2phone, start_time_for_file_id):
     criterion = nn.CrossEntropyLoss(ignore_index=0)
@@ -90,8 +116,8 @@ def train_lm(dataset, dev, params, rnns, ix2phone, start_time_for_file_id):
         dev_perplexity = compute_perplexity(dev, rnns, device)
 
         newline = 'epoch ' + str(epoch) + ' loss ' + str(ep_loss) + ' perplexity ' + str(dev_perplexity) + '\n'
-        with open('results/' + start_time_for_file_id + '.txt', 'a') as f:
-            f.write(newline)
+        # with open('results/' + start_time_for_file_id + '.txt', 'a') as f:
+        #     f.write(newline)
         print('epoch: %d, loss: %0.2f, time: %0.2f sec, dev perplexity: %0.2f' %
               (epoch, ep_loss, time.time()-start_time, dev_perplexity))
         print()
@@ -103,16 +129,16 @@ def train_lm(dataset, dev, params, rnns, ix2phone, start_time_for_file_id):
         else:
             prev_perplexity = dev_perplexity
 
-    if num_rnns > 1:
-        for rnn in rnns.keys():
-            with open('results/' + start_time_for_file_id + '.txt', 'a') as f:
-                newline = 'Group ' + str(rnn) + ' words:\n'
-                f.write(newline)
-            print('Group', rnn, 'words:')
-            for w in word_groups[rnn]:
-                with open('results/' + start_time_for_file_id + '.txt', 'a') as f:
-                    f.write(w[0])
-                    f.write('\t')
-                    f.write(str(float(w[1])))
-                    f.write('\n')
-                print(w[0], w[1])
+    # if num_rnns > 1:
+    #     for rnn in rnns.keys():
+            # with open('results/' + start_time_for_file_id + '.txt', 'a') as f:
+            #     newline = 'Group ' + str(rnn) + ' words:\n'
+            #     f.write(newline)
+            # print('Group', rnn, 'words:')
+            # for w in word_groups[rnn]:
+            #     with open('results/' + start_time_for_file_id + '.txt', 'a') as f:
+            #         f.write(w[0])
+            #         f.write('\t')
+            #         f.write(str(float(w[1])))
+            #         f.write('\n')
+            #     # print(w[0], w[1])

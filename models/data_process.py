@@ -25,6 +25,7 @@ def process_data(string_training_data, device, dev=True, training_split=60):
     # this will store the set of possible phones
     inventory = list(set(phone for word in string_training_data for phone in word))
     inventory = ['<p>'] + [x for x in inventory if x != '<p>'] #ensure that the padding symbol is at index 0
+    print(inventory)
 
     # dictionaries for looking up the index of a phone and vice versa
     phone2ix = {p: ix for (ix, p) in enumerate(inventory)}
