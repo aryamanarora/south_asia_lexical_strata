@@ -29,4 +29,4 @@ with open('tulpule_old_marathi.tsv', 'w') as fout:
                         for lang in CODES:
                             if lang + '.' in text: etyma.append(CODES[lang])
 
-                    fout.write(f'{word}\t{",".join(etyma)}\n')
+                    fout.write(f'{" ".join(list(word))}\t{",".join(etyma)}\n')
